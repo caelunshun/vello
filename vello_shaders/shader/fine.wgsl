@@ -20,6 +20,7 @@ struct Tile {
 
 #import segment
 #import config
+#import colorspace
 
 @group(0) @binding(0)
 var<uniform> config: Config;
@@ -743,14 +744,18 @@ fn read_fill(cmd_ix: u32) -> CmdFill {
     return CmdFill(size_and_rule, seg_data, backdrop);
 }
 
+fn read_raw_color(ix: u32) -> vec4<f32> {
+    return bitcast<vec4<f32>>(vec4<u32>(ptcl[ix], ptcl[ix + 1u], ptcl[ix + 2u], ptcl[ix + 3u]));
+}
+
 fn read_color(cmd_ix: u32) -> CmdColor {
-    let rgba_color = ptcl[cmd_ix + 1u];
+    let rgba_color = read_raw_color(cmd_ix + 1u);
     return CmdColor(rgba_color);
 }
 
 fn read_blur_rect(cmd_ix: u32) -> CmdBlurRect {
     let info_offset = ptcl[cmd_ix + 1u];
-    let rgba_color = ptcl[cmd_ix + 2u];
+    let rgba_color = read_raw_color(cmd_ix + 2u);
 
     let m0 = bitcast<f32>(info[info_offset]);
     let m1 = bitcast<f32>(info[info_offset + 1u]);
@@ -938,7 +943,7 @@ fn main(
     let local_xy = vec2(f32(local_id.x * PIXELS_PER_THREAD), f32(local_id.y));
     var rgba: array<vec4<f32>, PIXELS_PER_THREAD>;
     for (var i = 0u; i < PIXELS_PER_THREAD; i += 1u) {
-        rgba[i] = unpack4x8unorm(config.base_color).wzyx;
+        rgba[i] = config.base_color;
     }
     var blend_stack: array<array<u32, PIXELS_PER_THREAD>, BLEND_STACK_SPLIT>;
     var clip_depth = 0u;
@@ -969,13 +974,12 @@ fn main(
                 cmd_ix += 1u;
             }
             case CMD_COLOR: {
-                let color = read_color(cmd_ix);
-                let fg = unpack4x8unorm(color.rgba_color).wzyx;
+                let fg = read_color(cmd_ix).rgba_color;
                 for (var i = 0u; i < PIXELS_PER_THREAD; i += 1u) {
                     let fg_i = fg * area[i];
                     rgba[i] = rgba[i] * (1.0 - fg_i.a) + fg_i;
                 }
-                cmd_ix += 2u;
+                cmd_ix += 5u;
             }
             case CMD_BEGIN_CLIP: {
                 if clip_depth < BLEND_STACK_SPLIT {
@@ -1027,7 +1031,7 @@ fn main(
                 // Avoid division by 0
                 let std_dev = max(blur.std_dev, 1e-5);
                 let inv_std_dev = 1.0 / std_dev;
-                
+
                 let min_edge = min(blur.width, blur.height);
                 let radius_max = 0.5 * min_edge;
                 let r0 = min(hypot(blur.radius, std_dev * 1.15), radius_max);
@@ -1035,7 +1039,7 @@ fn main(
 
                 let exponent = 2.0 * r1 / r0;
                 let inv_exponent = 1.0 / exponent;
-                
+
                 // Pull in long end (make less eccentric).
                 let delta = 1.25 * std_dev * (exp(-pow(0.5 * inv_std_dev * blur.width, 2.0)) - exp(-pow(0.5 * inv_std_dev * blur.height, 2.0)));
                 let width = blur.width + min(delta, 0.0);
@@ -1061,11 +1065,11 @@ fn main(
                     let d = d_pos + d_neg - r1;
                     let alpha = scale * (erf7(inv_std_dev * (min_edge + d)) - erf7(inv_std_dev * d));
 
-                    let fg_rgba = unpack4x8unorm(blur.rgba_color).wzyx * alpha;
+                    let fg_rgba = blur.rgba_color * alpha;
                     let fg_i = fg_rgba * area[i];
                     rgba[i] = rgba[i] * (1.0 - fg_i.a) + fg_i;
                 }
-                cmd_ix += 3u;
+                cmd_ix += 6u;
             }
 #ifdef full
             case CMD_LIN_GRAD: {
@@ -1168,10 +1172,10 @@ fn main(
                     if all(atlas_uv < atlas_extents) && area[i] != 0.0 {
                         let uv_quad = vec4(max(floor(atlas_uv), image.atlas_offset), min(ceil(atlas_uv), atlas_extents));
                         let uv_frac = fract(atlas_uv);
-                        let a = premul_alpha(textureLoad(image_atlas, vec2<i32>(uv_quad.xy), 0));
-                        let b = premul_alpha(textureLoad(image_atlas, vec2<i32>(uv_quad.xw), 0));
-                        let c = premul_alpha(textureLoad(image_atlas, vec2<i32>(uv_quad.zy), 0));
-                        let d = premul_alpha(textureLoad(image_atlas, vec2<i32>(uv_quad.zw), 0));
+                        let a = premul_alpha(inverse_srgb_transfer_function(textureLoad(image_atlas, vec2<i32>(uv_quad.xy), 0)));
+                        let b = premul_alpha(inverse_srgb_transfer_function(textureLoad(image_atlas, vec2<i32>(uv_quad.xw), 0)));
+                        let c = premul_alpha(inverse_srgb_transfer_function(textureLoad(image_atlas, vec2<i32>(uv_quad.zy), 0)));
+                        let d = premul_alpha(inverse_srgb_transfer_function(textureLoad(image_atlas, vec2<i32>(uv_quad.zw), 0)));
                         let fg_rgba = mix(mix(a, b, uv_frac.y), mix(c, d, uv_frac.y), uv_frac.x);
                         let fg_i = fg_rgba * area[i];
                         rgba[i] = rgba[i] * (1.0 - fg_i.a) + fg_i;
@@ -1191,9 +1195,10 @@ fn main(
             // Max with a small epsilon to avoid NaNs
             let a_inv = 1.0 / max(fg.a, 1e-6);
             let rgba_sep = vec4(fg.rgb * a_inv, fg.a);
-            textureStore(output, vec2<i32>(coords), rgba_sep);
+            let final_color = apply_srgb_transfer_function(rgba_sep);
+            textureStore(output, vec2<i32>(coords), final_color);
         }
-    } 
+    }
 }
 
 fn premul_alpha(rgba: vec4<f32>) -> vec4<f32> {

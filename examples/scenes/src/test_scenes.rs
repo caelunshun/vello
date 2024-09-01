@@ -1099,7 +1099,7 @@ mod impls {
                 Affine::IDENTITY,
                 &Rect::from_origin_size((10., 10.), (*width, *width)),
             );
-            scene.fill(Fill::EvenOdd, Affine::IDENTITY, colour, None, &main_rect);
+            scene.fill(Fill::EvenOdd, Affine::IDENTITY, *colour, None, &main_rect);
             depth += 1;
         }
         for _ in 0..depth {
@@ -1241,7 +1241,7 @@ mod impls {
         ];
         for (x, y, c) in GRADIENTS {
             let mut color2 = *c;
-            color2.a = 0;
+            color2.alpha = 0.0;
             let radial = Gradient::new_radial((*x, *y), 100.0).with_stops([*c, color2]);
             scene.fill(Fill::NonZero, transform, &radial, None, &rect);
         }

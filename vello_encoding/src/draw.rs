@@ -16,7 +16,7 @@ impl DrawTag {
     pub const NOP: Self = Self(0);
 
     /// Color fill.
-    pub const COLOR: Self = Self(0x44);
+    pub const COLOR: Self = Self(0x50);
 
     /// Linear gradient fill.
     pub const LINEAR_GRADIENT: Self = Self(0x114);
@@ -63,17 +63,16 @@ pub struct DrawBbox {
 #[derive(Clone, Copy, Debug, Default, Zeroable, Pod)]
 #[repr(C)]
 pub struct DrawColor {
-    /// Packed little endian RGBA premultiplied color with the alpha component
-    /// in the low byte.
-    pub rgba: u32,
+    /// Premultiplied linear sRGB with alpha channel. `[r, g, b, a]`.
+    rgba: [f32; 4],
 }
 
 impl DrawColor {
     /// Creates new solid color draw data.
     pub fn new(color: Color) -> Self {
-        Self {
-            rgba: color.to_premul_u32(),
-        }
+        let color_premult = color.premultiply();
+        let components = color_premult.into();
+        Self { rgba: components }
     }
 }
 

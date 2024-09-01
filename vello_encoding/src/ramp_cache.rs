@@ -11,7 +11,7 @@ const RETAINED_COUNT: usize = 64;
 /// Data and dimensions for a set of resolved gradient ramps.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Ramps<'a> {
-    pub data: &'a [u32],
+    pub data: &'a [Color],
     pub width: u32,
     pub height: u32,
 }
@@ -20,7 +20,7 @@ pub struct Ramps<'a> {
 pub(crate) struct RampCache {
     epoch: u64,
     map: HashMap<ColorStops, (u32, u64)>,
-    data: Vec<u32>,
+    data: Vec<Color>,
 }
 
 impl RampCache {
@@ -79,9 +79,9 @@ impl RampCache {
     }
 }
 
-fn make_ramp(stops: &[ColorStop]) -> impl Iterator<Item = u32> + '_ {
+fn make_ramp(stops: &[ColorStop]) -> impl Iterator<Item = Color> + '_ {
     let mut last_u = 0.0;
-    let mut last_c = ColorF64::from_color(stops[0].color);
+    let mut last_c = stops[0].color;
     let mut this_u = last_u;
     let mut this_c = last_c;
     let mut j = 0;
@@ -92,53 +92,19 @@ fn make_ramp(stops: &[ColorStop]) -> impl Iterator<Item = u32> + '_ {
             last_c = this_c;
             if let Some(s) = stops.get(j + 1) {
                 this_u = s.offset as f64;
-                this_c = ColorF64::from_color(s.color);
+                this_c = s.color;
                 j += 1;
             } else {
                 break;
             }
         }
         let du = this_u - last_u;
-        let c = if du < 1e-9 {
+        if du < 1e-9 {
             this_c
         } else {
-            last_c.lerp(&this_c, (u - last_u) / du)
-        };
-        c.as_premul_u32()
-    })
-}
-
-#[derive(Copy, Clone, Debug)]
-struct ColorF64([f64; 4]);
-
-impl ColorF64 {
-    fn from_color(color: Color) -> Self {
-        Self([
-            color.r as f64 / 255.0,
-            color.g as f64 / 255.0,
-            color.b as f64 / 255.0,
-            color.a as f64 / 255.0,
-        ])
-    }
-
-    fn lerp(&self, other: &Self, a: f64) -> Self {
-        fn l(x: f64, y: f64, a: f64) -> f64 {
-            x * (1.0 - a) + y * a
+            let t = (u - last_u) / du;
+            last_c.lerp(this_c, t as f32)
         }
-        Self([
-            l(self.0[0], other.0[0], a),
-            l(self.0[1], other.0[1], a),
-            l(self.0[2], other.0[2], a),
-            l(self.0[3], other.0[3], a),
-        ])
-    }
-
-    fn as_premul_u32(&self) -> u32 {
-        let a = self.0[3].clamp(0.0, 1.0);
-        let r = ((self.0[0] * a).clamp(0.0, 1.0) * 255.0) as u32;
-        let g = ((self.0[1] * a).clamp(0.0, 1.0) * 255.0) as u32;
-        let b = ((self.0[2] * a).clamp(0.0, 1.0) * 255.0) as u32;
-        let a = (a * 255.0) as u32;
-        r | (g << 8) | (b << 16) | (a << 24)
-    }
+        .premultiply()
+    })
 }

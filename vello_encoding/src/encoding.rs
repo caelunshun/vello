@@ -269,12 +269,8 @@ impl Encoding {
         #[cfg(feature = "full")]
         use super::math::point_to_f32;
         match brush.into() {
-            BrushRef::Solid(color) => {
-                let color = if alpha != 1.0 {
-                    color.with_alpha_factor(alpha)
-                } else {
-                    color
-                };
+            BrushRef::Solid(mut color) => {
+                color.alpha *= alpha;
                 self.encode_color(DrawColor::new(color));
             }
             #[cfg(feature = "full")]

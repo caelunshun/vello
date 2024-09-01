@@ -9,7 +9,6 @@ use crate::{
     wgpu_engine::WgpuEngine,
     DebugDownloads, RenderParams,
 };
-
 use {
     bytemuck::{offset_of, Pod, Zeroable},
     peniko::Color,
@@ -353,11 +352,7 @@ struct LinepointsUniforms {
 impl LinepointsUniforms {
     fn new(color: Color, point_size: f32) -> Self {
         Self {
-            point_color: [
-                color.r as f32 / 255.,
-                color.g as f32 / 255.,
-                color.b as f32 / 255.,
-            ],
+            point_color: [color.red, color.green, color.blue],
             point_size,
             _pad0: [0; 30],
             _pad1: [0; 30],

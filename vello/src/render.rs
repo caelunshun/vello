@@ -145,7 +145,7 @@ impl Render {
             ResourceProxy::Image(recording.upload_image(
                 ramps.width,
                 ramps.height,
-                ImageFormat::Rgba8,
+                ImageFormat::Rgba32f,
                 data,
             ))
         };

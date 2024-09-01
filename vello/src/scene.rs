@@ -903,7 +903,12 @@ fn conv_brush(
             palette_index,
             alpha,
         } => color_index(cpal, palette_index)
-            .map(|it| Brush::Solid(it.with_alpha_factor(alpha)))
+            .map(|mut it| {
+                Brush::Solid({
+                    it.alpha *= alpha;
+                    it
+                })
+            })
             .unwrap_or(apply_alpha(foreground_brush.to_owned(), alpha)),
 
         skrifa::color::Brush::LinearGradient {
@@ -944,11 +949,8 @@ fn conv_brush(
 
 fn apply_alpha(mut brush: Brush, alpha: f32) -> Brush {
     match &mut brush {
-        Brush::Solid(color) => *color = color.with_alpha_factor(alpha),
-        Brush::Gradient(grad) => grad
-            .stops
-            .iter_mut()
-            .for_each(|it| it.color = it.color.with_alpha_factor(alpha)),
+        Brush::Solid(color) => color.alpha *= alpha,
+        Brush::Gradient(grad) => grad.stops.iter_mut().for_each(|it| it.color.alpha *= alpha),
         // Cannot apply an alpha factor to
         Brush::Image(_) => {}
     }
@@ -996,7 +998,7 @@ impl ColorStopsSource for ColorStopsConverter<'_> {
     fn collect_stops(&self, vec: &mut ColorStops) {
         for item in self.0 {
             let color = color_index(self.1, item.palette_index);
-            let color = match color {
+            let mut color = match color {
                 Some(color) => color,
                 // If we should use the "application defined fallback colour",
                 // then *try* and determine that from the existing brush
@@ -1013,7 +1015,7 @@ impl ColorStopsSource for ColorStopsConverter<'_> {
                     BrushRef::Image(_) => Color::BLACK,
                 },
             };
-            let color = color.with_alpha_factor(item.alpha);
+            color.alpha *= item.alpha;
             vec.push(ColorStop {
                 color,
                 offset: item.offset,

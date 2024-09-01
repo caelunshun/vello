@@ -138,7 +138,8 @@ fn set_sat(c: vec3<f32>, s: f32) -> vec3<f32> {
 }
 
 // Blends two RGB colors together. The colors are assumed to be in sRGB
-// color space, and this function does not take alpha into account.
+// color space with transfer function applied, 
+// and this function does not take alpha into account.
 fn blend_mix(cb: vec3<f32>, cs: vec3<f32>, mode: u32) -> vec3<f32> {
     var b = vec3(0.0);
     switch mode {
@@ -284,7 +285,7 @@ fn blend_compose(
 }
 
 // Apply color mixing and composition. Both input and output colors are
-// premultiplied RGB.
+// premultiplied linear sRGB.
 fn blend_mix_compose(backdrop: vec4<f32>, src: vec4<f32>, mode: u32) -> vec4<f32> {
     let BLEND_DEFAULT = ((MIX_NORMAL << 8u) | COMPOSE_SRC_OVER);
     let EPSILON = 1e-15;

@@ -82,7 +82,7 @@ impl<'a> GlyphProvider<'a> {
         scene.fill(
             Fill::NonZero,
             Affine::IDENTITY,
-            brush.unwrap_or(&Brush::Solid(Color::rgb8(255, 255, 255))),
+            brush.unwrap_or(&Brush::Solid(Color::WHITE)),
             None,
             &path.0,
         );

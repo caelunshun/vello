@@ -86,6 +86,10 @@ fn alloc_cmd(size: u32) {
     }
 }
 
+fn read_color( offset: u32) -> vec4<f32> {
+    return bitcast<vec4<f32>>(vec4<u32>(scene[offset], scene[offset + 1u], scene[offset + 2u], scene[offset + 3u]));
+}
+
 fn write_path(tile: Tile, tile_ix: u32, draw_flags: u32) {
     // We overload the "segments" field to store both count (written by
     // path_count stage) and segment allocation (used by path_tiling and
@@ -110,11 +114,18 @@ fn write_path(tile: Tile, tile_ix: u32, draw_flags: u32) {
     }
 }
 
-fn write_color(color: CmdColor) {
-    alloc_cmd(2u);
+fn write_color(color: vec4<f32>, offset: u32) {
+    ptcl[offset] = bitcast<u32>(color.r);
+    ptcl[offset + 1u] = bitcast<u32>(color.g);
+    ptcl[offset + 2u] = bitcast<u32>(color.b);
+    ptcl[offset + 3u] = bitcast<u32>(color.a);
+}
+
+fn write_cmd_color(color: CmdColor) {
+    alloc_cmd(5u);
     ptcl[cmd_offset] = CMD_COLOR;
-    ptcl[cmd_offset + 1u] = color.rgba_color;
-    cmd_offset += 2u;
+    write_color(color.rgba_color, cmd_offset + 1u);
+    cmd_offset += 5u;
 }
 
 fn write_grad(ty: u32, index: u32, info_offset: u32) {
@@ -147,11 +158,11 @@ fn write_end_clip(end_clip: CmdEndClip) {
 }
 
 fn write_blurred_rounded_rect(color: CmdColor, info_offset: u32) {
-    alloc_cmd(3u);
+    alloc_cmd(6u);
     ptcl[cmd_offset] = CMD_BLUR_RECT;
     ptcl[cmd_offset + 1u] = info_offset;
-    ptcl[cmd_offset + 2u] = color.rgba_color;
-    cmd_offset += 3u;
+    write_color(color.rgba_color, cmd_offset + 2u);
+    cmd_offset += 6u;
 }
 
 @compute @workgroup_size(256)
@@ -379,12 +390,12 @@ fn main(
                 switch drawtag {
                     case DRAWTAG_FILL_COLOR: {
                         write_path(tile, tile_ix, draw_flags);
-                        let rgba_color = scene[dd];
-                        write_color(CmdColor(rgba_color));
+                        let rgba_color = read_color(dd);
+                        write_cmd_color(CmdColor(rgba_color));
                     }
                     case DRAWTAG_BLURRED_ROUNDED_RECT: {
                         write_path(tile, tile_ix, draw_flags);
-                        let rgba_color = scene[dd];
+                        let rgba_color = read_color(dd);
                         let info_offset = di + 1u;
                         write_blurred_rounded_rect(CmdColor(rgba_color), info_offset);
                     }

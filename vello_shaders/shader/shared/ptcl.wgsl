@@ -43,12 +43,13 @@ struct CmdJump {
 }
 
 struct CmdColor {
-    rgba_color: u32,
+    // Linear sRGB, premultiplied.
+    rgba_color: vec4<f32>,
 }
 
 struct CmdBlurRect {
-    // Solid fill color.
-    rgba_color: u32,
+    // Solid fill color as in CmdColor.
+    rgba_color: vec4<f32>,
     
     // 2x2 transformation matrix (inverse).
     matrx: vec4<f32>,
