@@ -263,10 +263,10 @@ fn main(
                     info[di + 4u] = bitcast<u32>(inv.matrx.w);
                     info[di + 5u] = bitcast<u32>(inv.translate.x);
                     info[di + 6u] = bitcast<u32>(inv.translate.y);
-                    info[di + 7u] = scene[dd + 1u];
-                    info[di + 8u] = scene[dd + 2u];
-                    info[di + 9u] = scene[dd + 3u];
-                    info[di + 10u] = scene[dd + 4u];
+                    info[di + 7u] = scene[dd + 2u];
+                    info[di + 8u] = scene[dd + 3u];
+                    info[di + 9u] = scene[dd + 4u];
+                    info[di + 10u] = scene[dd + 5u];
                 }
                 default: {}
             }

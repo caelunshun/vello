@@ -1070,7 +1070,6 @@ fn main(
                     let fg_rgba = blur.rgba_color * alpha;
                     let fg_i = fg_rgba * area[i];
                     rgba[i] = rgba[i] * (1.0 - fg_i.a) + fg_i;
-                    rgba[i] = vec4<f32>(alpha);
                 }
                 cmd_ix += 4u;
             }
