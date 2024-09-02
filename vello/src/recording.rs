@@ -40,8 +40,8 @@ pub enum ImageFormat {
     Rgba8,
     /// 8-bit sRGB with sRGB transfer function.
     Bgra8,
-    /// 32-bit float, linear sRGB.
-    Rgba32f,
+    /// 16-bit float, linear sRGB.
+    Rgba16f,
 }
 
 /// Proxy used as a handle to an image.
@@ -243,16 +243,12 @@ impl BufferProxy {
 }
 
 impl ImageFormat {
-    pub fn is_filterable(&self) -> bool {
-        *self != Self::Rgba32f
-    }
-
     #[cfg(feature = "wgpu")]
     pub fn to_wgpu(self) -> wgpu::TextureFormat {
         match self {
             Self::Rgba8 => wgpu::TextureFormat::Rgba8Unorm,
             Self::Bgra8 => wgpu::TextureFormat::Bgra8Unorm,
-            Self::Rgba32f => wgpu::TextureFormat::Rgba32Float,
+            Self::Rgba16f => wgpu::TextureFormat::Rgba16Float,
         }
     }
 
@@ -261,7 +257,7 @@ impl ImageFormat {
         match format {
             wgpu::TextureFormat::Rgba8Unorm => Self::Rgba8,
             wgpu::TextureFormat::Bgra8Unorm => Self::Bgra8,
-            wgpu::TextureFormat::Rgba32Float => Self::Rgba32f,
+            wgpu::TextureFormat::Rgba16Float => Self::Rgba16f,
             _ => unimplemented!(),
         }
     }

@@ -1,17 +1,19 @@
 // Copyright 2022 the Vello Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use half::f16;
+use peniko::{ColorStop, ColorStops};
 use std::collections::HashMap;
-
-use peniko::{Color, ColorStop, ColorStops};
 
 const N_SAMPLES: usize = 512;
 const RETAINED_COUNT: usize = 64;
 
+type HalfColor = [f16; 4];
+
 /// Data and dimensions for a set of resolved gradient ramps.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Ramps<'a> {
-    pub data: &'a [Color],
+    pub data: &'a [HalfColor],
     pub width: u32,
     pub height: u32,
 }
@@ -20,7 +22,7 @@ pub struct Ramps<'a> {
 pub(crate) struct RampCache {
     epoch: u64,
     map: HashMap<ColorStops, (u32, u64)>,
-    data: Vec<Color>,
+    data: Vec<HalfColor>,
 }
 
 impl RampCache {
@@ -79,7 +81,7 @@ impl RampCache {
     }
 }
 
-fn make_ramp(stops: &[ColorStop]) -> impl Iterator<Item = Color> + '_ {
+fn make_ramp(stops: &[ColorStop]) -> impl Iterator<Item = HalfColor> + '_ {
     let mut last_u = 0.0;
     let mut last_c = stops[0].color;
     let mut this_u = last_u;
@@ -99,12 +101,14 @@ fn make_ramp(stops: &[ColorStop]) -> impl Iterator<Item = Color> + '_ {
             }
         }
         let du = this_u - last_u;
-        if du < 1e-9 {
+        let color = if du < 1e-9 {
             this_c
         } else {
             let t = (u - last_u) / du;
             last_c.lerp(this_c, t as f32)
         }
-        .premultiply()
+        .premultiply();
+        let color: [f32; 4] = color.into();
+        color.map(f16::from_f32)
     })
 }
