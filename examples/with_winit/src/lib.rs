@@ -544,7 +544,6 @@ impl<'s> ApplicationHandler<UserEvent> for VelloApp<'s> {
 
                 drop(texture_span);
                 let render_span = tracing::trace_span!("Dispatching render").entered();
-
                 // Note: we don't run the async/"robust" pipeline, as
                 // it requires more async wiring for the readback. See
                 // [#gpu > async on wasm](https://xi.zulipchat.com/#narrow/stream/197075-gpu/topic/async.20on.20wasm)

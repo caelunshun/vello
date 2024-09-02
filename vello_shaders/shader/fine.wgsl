@@ -745,7 +745,9 @@ fn read_fill(cmd_ix: u32) -> CmdFill {
 }
 
 fn read_raw_color(ix: u32) -> vec4<f32> {
-    return bitcast<vec4<f32>>(vec4<u32>(ptcl[ix], ptcl[ix + 1u], ptcl[ix + 2u], ptcl[ix + 3u]));
+    let rg = unpack2x16float(ptcl[ix]);
+    let ba = unpack2x16float(ptcl[ix + 1u]);
+    return vec4<f32>(rg, ba);
 }
 
 fn read_color(cmd_ix: u32) -> CmdColor {
@@ -979,7 +981,7 @@ fn main(
                     let fg_i = fg * area[i];
                     rgba[i] = rgba[i] * (1.0 - fg_i.a) + fg_i;
                 }
-                cmd_ix += 5u;
+                cmd_ix += 3u;
             }
             case CMD_BEGIN_CLIP: {
                 if clip_depth < BLEND_STACK_SPLIT {
@@ -1068,8 +1070,9 @@ fn main(
                     let fg_rgba = blur.rgba_color * alpha;
                     let fg_i = fg_rgba * area[i];
                     rgba[i] = rgba[i] * (1.0 - fg_i.a) + fg_i;
+                    rgba[i] = vec4<f32>(alpha);
                 }
-                cmd_ix += 6u;
+                cmd_ix += 4u;
             }
 #ifdef full
             case CMD_LIN_GRAD: {

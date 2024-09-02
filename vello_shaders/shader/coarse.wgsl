@@ -86,8 +86,10 @@ fn alloc_cmd(size: u32) {
     }
 }
 
-fn read_color( offset: u32) -> vec4<f32> {
-    return bitcast<vec4<f32>>(vec4<u32>(scene[offset], scene[offset + 1u], scene[offset + 2u], scene[offset + 3u]));
+fn read_color(offset: u32) -> vec4<f32> {
+    let rg = scene[offset];
+    let ba = scene[offset + 1u];
+    return vec4<f32>(unpack2x16float(rg), unpack2x16float(ba));
 }
 
 fn write_path(tile: Tile, tile_ix: u32, draw_flags: u32) {
@@ -115,17 +117,17 @@ fn write_path(tile: Tile, tile_ix: u32, draw_flags: u32) {
 }
 
 fn write_color(color: vec4<f32>, offset: u32) {
-    ptcl[offset] = bitcast<u32>(color.r);
-    ptcl[offset + 1u] = bitcast<u32>(color.g);
-    ptcl[offset + 2u] = bitcast<u32>(color.b);
-    ptcl[offset + 3u] = bitcast<u32>(color.a);
+    let rg = pack2x16float(color.rg);
+    let ba = pack2x16float(color.ba);
+    ptcl[offset] = rg;
+    ptcl[offset + 1u] = ba;
 }
 
 fn write_cmd_color(color: CmdColor) {
-    alloc_cmd(5u);
+    alloc_cmd(3u);
     ptcl[cmd_offset] = CMD_COLOR;
     write_color(color.rgba_color, cmd_offset + 1u);
-    cmd_offset += 5u;
+    cmd_offset += 3u;
 }
 
 fn write_grad(ty: u32, index: u32, info_offset: u32) {
@@ -158,11 +160,11 @@ fn write_end_clip(end_clip: CmdEndClip) {
 }
 
 fn write_blurred_rounded_rect(color: CmdColor, info_offset: u32) {
-    alloc_cmd(6u);
+    alloc_cmd(4u);
     ptcl[cmd_offset] = CMD_BLUR_RECT;
     ptcl[cmd_offset + 1u] = info_offset;
     write_color(color.rgba_color, cmd_offset + 2u);
-    cmd_offset += 6u;
+    cmd_offset += 4u;
 }
 
 @compute @workgroup_size(256)

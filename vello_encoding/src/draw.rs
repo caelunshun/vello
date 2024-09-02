@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use bytemuck::{Pod, Zeroable};
+use half::f16;
 use peniko::{BlendMode, Color};
 
 use super::Monoid;
@@ -16,7 +17,7 @@ impl DrawTag {
     pub const NOP: Self = Self(0);
 
     /// Color fill.
-    pub const COLOR: Self = Self(0x50);
+    pub const COLOR: Self = Self(0x48);
 
     /// Linear gradient fill.
     pub const LINEAR_GRADIENT: Self = Self(0x114);
@@ -31,7 +32,7 @@ impl DrawTag {
     pub const IMAGE: Self = Self(0x248);
 
     /// Blurred rounded rectangle.
-    pub const BLUR_RECT: Self = Self(0x2d4); // info: 11, scene: 5 (DrawBlurRoundedRect)
+    pub const BLUR_RECT: Self = Self(0x2d8); // info: 11, scene: 6 (DrawBlurRoundedRect)
 
     /// Begin layer/clip.
     pub const BEGIN_CLIP: Self = Self(0x9);
@@ -64,15 +65,17 @@ pub struct DrawBbox {
 #[repr(C)]
 pub struct DrawColor {
     /// Premultiplied linear sRGB with alpha channel. `[r, g, b, a]`.
-    rgba: [f32; 4],
+    rgba: [f16; 4],
 }
 
 impl DrawColor {
     /// Creates new solid color draw data.
     pub fn new(color: Color) -> Self {
         let color_premult = color.premultiply();
-        let components = color_premult.into();
-        Self { rgba: components }
+        let components: [f32; 4] = color_premult.into();
+        Self {
+            rgba: components.map(f16::from_f32),
+        }
     }
 }
 

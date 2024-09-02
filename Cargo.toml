@@ -41,6 +41,7 @@ vello = { version = "0.2.0", path = "vello" }
 vello_encoding = { version = "0.2.0", path = "vello_encoding" }
 vello_shaders = { version = "0.2.0", path = "vello_shaders" }
 bytemuck = { version = "1.16.0", features = ["derive"] }
+half = { version = "2", features = ["bytemuck"] }
 skrifa = "0.19.3"
 peniko = { git = "https://github.com/caelunshun/peniko", branch = "expanded-color-support", features = ["bytemuck"] }
 futures-intrusive = "0.5.0"
